@@ -28,25 +28,25 @@ Use the following pronouns for the employee throughout the evaluation: {{pronoun
 The following information should be used to inform the evaluation: 
 
 **Employee's College Services**:
-    {{student_services}}
+{{student_services}}
 
 **Employee's College Service Strengths**:
-    {{college_service_strengths}}
+{{college_service_strengths}}
 
 **Employee's College Service Areas for Improvement**:
-    {{college_service_improvements}}
+{{college_service_improvements}}
 
 **Employee's Work Accomplishments**:
-    {{work_accomplishments}}
+{{work_accomplishments}}
 
 **Employee's Work Performance Strengths**:
-    {{work_performance_strengths}}
+{{work_performance_strengths}}
 
 **Employee's Work Performance Areas for Improvement**:
-    {{work_performance_improvements}}
+{{work_performance_improvements}}
 
 **Overall Notes/Comments**:
-    {{overall_notes}}
+{{overall_notes}}
 
 
 **Mimic the writing style, tone, and structure of the following example performance evaluations. Use them as a style and formatting guide:**
