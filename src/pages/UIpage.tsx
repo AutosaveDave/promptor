@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Container, Typography, TextField, MenuItem, Button, Modal, Box, Select } from '@mui/material';
+import { Container, Typography, TextField, MenuItem, Button, Modal, Box } from '@mui/material';
 import { getUI } from '../data/getUI';
 import type { UI } from '../data/uiConfigTypes';
 
@@ -24,7 +24,7 @@ const UIpage: React.FC<UIPageProps> = ({ selectedUI }) => {
   const [formState, setFormState] = useState<Record<string, any>>({});
   const [modalOpen, setModalOpen] = useState(false);
   const [generatedPrompt, setGeneratedPrompt] = useState('');
-  const [loadingPrompt, setLoadingPrompt] = useState(false);
+  // const [loadingPrompt, setLoadingPrompt] = useState(false);
 
   if (!uiData) {
     return <Typography color="error">No UI found for: {selectedUI}</Typography>;
@@ -37,7 +37,7 @@ const UIpage: React.FC<UIPageProps> = ({ selectedUI }) => {
 
   // Generate prompt using template and text files
   const handleGeneratePrompt = async () => {
-    setLoadingPrompt(true);
+    // setLoadingPrompt(true); // removed unused loadingPrompt state
     // Load template and fragments using Vite's import.meta.glob
     const basePath = `src/data/${selectedUI}/`;
     const templatePath = basePath + 'template.txt';
@@ -59,7 +59,7 @@ const UIpage: React.FC<UIPageProps> = ({ selectedUI }) => {
     });
     setGeneratedPrompt(prompt);
     setModalOpen(true);
-    setLoadingPrompt(false);
+    // setLoadingPrompt(false); // removed unused loadingPrompt state
   };
 
   // Copy prompt to clipboard

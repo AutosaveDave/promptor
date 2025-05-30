@@ -4,7 +4,7 @@ import { CssBaseline, Container, CircularProgress, Grid, Button, TextField, Typo
 import { initializeApp } from 'firebase/app'
 import { getAuth, onAuthStateChanged, signInWithPopup, GoogleAuthProvider, signOut, signInWithEmailAndPassword } from 'firebase/auth'
 import { getFirestore, collection, getDocs, query, where } from 'firebase/firestore'
-import type { UI } from './data/uiConfigTypes'
+// import type { UI } from './data/uiConfigTypes'
 import './App.css'
 import UIpage from './pages/UIpage'
 import { getUINames } from './data/getUI'
