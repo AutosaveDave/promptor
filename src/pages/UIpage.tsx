@@ -115,6 +115,7 @@ const UIpage: React.FC<UIPageProps> = ({ selectedUI }) => {
 
   return (
     <Container sx={{ 
+        top: 0,
         minWidth: { xs:"95vw", sm:"80vw", md:"70vw", lg:"60vw" },
         maxWidth: { xs:"98vw", sm:"94vw", md:"92vw", lg:"90vw" },
     }}>
@@ -124,7 +125,7 @@ const UIpage: React.FC<UIPageProps> = ({ selectedUI }) => {
         // Render topbar as a fixed AppBar if fixed is true
         if (sectionKey === 'topbar' && section.fixed) {
           return (
-            <Box key={sectionKey} sx={{ position: 'sticky', top: 0, zIndex: 1200, background: backgroundColor, color: textColor, borderRadius: 0, boxShadow: 1, px: 2, py: 1, width: '100vw', left: 0, right: 0, marginLeft: 'calc(-50vw + 50%)', marginRight: 'calc(-50vw + 50%)' }}>
+            <Box key={sectionKey} sx={{ position: 'sticky', top: 0, zIndex: 1200, background: backgroundColor, color: textColor, borderRadius: 0, boxShadow: 1, paddingLeft: 2, paddingRight: "7em", py: 1, width: '100vw', left: 0, right: 0, marginLeft: 'calc(-50vw + 50%)', marginRight: 'calc(-50vw + 50%)' }}>
               <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 2, alignItems: 'center', justifyContent: 'center' }}>
                 {section.components.map((comp) => {
                   if (comp.type === 'textinput') {
@@ -209,7 +210,7 @@ const UIpage: React.FC<UIPageProps> = ({ selectedUI }) => {
           <section
             key={sectionKey}
             style={{
-              marginBottom: 32,
+              marginTop: 32,
               background: backgroundColor,
               color: textColor,
               borderRadius: 8,

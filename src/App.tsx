@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { Routes, Route, Navigate, useLocation, useParams, useNavigate } from 'react-router-dom'
-import { CssBaseline, Container, CircularProgress, Grid, Button, TextField, Typography } from '@mui/material'
+import { CssBaseline, Container, CircularProgress, Grid, Paper, Button, TextField, Typography, Box } from '@mui/material'
 import { initializeApp } from 'firebase/app'
 import { getAuth, onAuthStateChanged, signInWithPopup, GoogleAuthProvider, signOut, signInWithEmailAndPassword } from 'firebase/auth'
 import { getFirestore, collection, getDocs, query, where } from 'firebase/firestore'
@@ -89,12 +89,18 @@ function Login() {
 
   return (
     <Container sx={{ textAlign: 'center', mt: 8, maxWidth: 400 }}>
+      <Paper sx={{ backgroundColor: "#0c637f", padding: 4, borderRadius: 2 }}>
       <h2>Login</h2>
       <form onSubmit={handleEmailLogin} style={{ marginBottom: 24 }}>
         <TextField
           label="Email"
           type="email"
           value={email}
+          variant="filled"
+          slotProps={{
+            input: { style: { background: "#efefcf", color: "#000000" } },
+            inputLabel: { style: { color: "#000000" } }
+          }}
           onChange={e => setEmail(e.target.value)}
           fullWidth
           margin="normal"
@@ -104,6 +110,11 @@ function Login() {
           label="Password"
           type="password"
           value={password}
+          variant="filled"
+          slotProps={{
+            input: { style: { background: "#efefcf", color: "#000000" } },
+            inputLabel: { style: { color: "#000000" } }
+          }}
           onChange={e => setPassword(e.target.value)}
           fullWidth
           margin="normal"
@@ -117,38 +128,72 @@ function Login() {
           disabled={loading}
           sx={{ mt: 2 }}
         >
-          {loading ? 'Signing in...' : 'Sign in with Email'}
+          {loading ? 'Signing in...' : 'Login'}
         </Button>
       </form>
       <Button
         onClick={handleLogin}
-        variant="outlined"
-        color="primary"
+        variant="contained"
+        
         fullWidth
         disabled={loading}
-        sx={{ mb: 2 }}
+        sx={{ mb: 2, color:"#000000", backgroundColor:"#ffce54", '&:hover':{backgroundColor:"#ffdf78"}}}
       >
         {loading ? 'Signing in...' : 'Sign in with Google'}
       </Button>
       {error && <Typography color="error" sx={{ mt: 2 }}>{error}</Typography>}
+      </Paper>
     </Container>
   )
 }
 
+const uiButtonColors: string[] = [
+  "#5d9cec","#ed5565","#48cfad",
+  "#ffce54","#ac92ec","#fc6e51",
+  "#4fc1e9","#ec87c0","#a0d468"
+];
+// "#0cb0a9", "#f78c6b", "#118ab2", 
+//   "#ffd166", "#0c637f", "#83d483", 
+//   "#073b4c", "#06d6a0", "#ef476f"
+
 function Home() {
   const navigate = useNavigate()
-  // Get all available UI names from getUI (assuming getUI.keys() or similar)
   const uiNames = getUINames();
-  
+  const [user, setUser] = useState(auth.currentUser)
+  useEffect(() => {
+    return onAuthStateChanged(auth, setUser)
+  }, [])
   return (
-    <>
-      <h2>Select a UI</h2>
+    <Box sx={{ position: 'relative', overflowY: 'auto' }}>
+      {user && (
+        <Button
+          onClick={() => signOut(auth)}
+          variant="contained"
+          color="primary"
+          sx={{ position: 'fixed', top: 24, right: 24, zIndex: 1300, textTransform: 'none' }}
+        >
+          Log Out
+        </Button>
+      )}
+      <Typography variant="h4" sx={{ textAlign: 'center', mb: 4, color: "#ffffff" }}>Select a UI</Typography>
       <Grid container spacing={4} justifyContent="center">
-        {uiNames.map((uiName) => (
+        {uiNames.map((uiName, idx) => (
           <Grid key={uiName} sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
             <Button
               variant="contained"
-              sx={{ width: 180, height: 180, fontSize: 24, borderRadius: 4, textTransform: 'none' }}
+              sx={{
+                width: 180,
+                height: 180,
+                fontSize: 24,
+                borderRadius: 4,
+                textTransform: 'none',
+                backgroundColor: uiButtonColors[idx % uiButtonColors.length],
+                color: '#000000',
+                '&:hover': {
+                  backgroundColor: uiButtonColors[idx % uiButtonColors.length],
+                  opacity: 0.9,
+                }
+              }}
               onClick={() => navigate(`/ui/${uiName}`)}
             >
               {uiName}
@@ -156,12 +201,8 @@ function Home() {
           </Grid>
         ))}
       </Grid>
-    </>
+    </Box>
   )
-}
-
-function About() {
-  return <h2>About Page (Protected)</h2>
 }
 
 function Navbar() {
@@ -169,10 +210,12 @@ function Navbar() {
   useEffect(() => {
     return onAuthStateChanged(auth, setUser)
   }, [])
+  const location = useLocation();
+  // Hide Navbar on UI page
+  if (location.pathname.startsWith('/ui/')) return null;
   return (
     <nav style={{ display: 'flex', gap: 16, marginBottom: 24 }}>
-      <a href="/">Home</a>
-      <a href="/about">About</a>
+      <Button variant="contained" color="primary" href="/" sx={{ textTransform: 'none' }}>Home</Button>
       {user && <button onClick={() => signOut(auth)}>Sign Out</button>}
     </nav>
   )
@@ -180,19 +223,34 @@ function Navbar() {
 
 function UIpageRouteWrapper() {
   const { uiName } = useParams<{ uiName: string }>()
+  const navigate = useNavigate();
   if (!uiName) return <div>Missing UI name</div>
-  return <UIpage selectedUI={uiName} />
+  return (
+    <Box sx={{ position: 'relative', minHeight: '100vh' }}>
+      <Button
+        variant="contained"
+        color="primary"
+        sx={{ position: 'fixed', top: 24, right: 24, zIndex: 1300, textTransform: 'none' }}
+        onClick={() => navigate('/')}
+      >
+        Home
+      </Button>
+      <UIpage selectedUI={uiName} />
+    </Box>
+  )
 }
 
 function App() {
+  const location = useLocation();
+  const isLogin = location.pathname === '/login';
+  const isHome = location.pathname === '/';
   return (
     <>
       <CssBaseline />
-      <Navbar />
+      {!isLogin && !isHome && <Navbar />}
       <Routes>
         <Route path="/login" element={<Login />} />
         <Route path="/" element={<RequireAuth><Home /></RequireAuth>} />
-        <Route path="/about" element={<RequireAuth><About /></RequireAuth>} />
         <Route path="/ui/:uiName" element={<RequireAuth><UIpageRouteWrapper /></RequireAuth>} />
       </Routes>
     </>
