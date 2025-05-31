@@ -48,7 +48,10 @@ function RequireAuth({ children }: { children: React.ReactNode }) {
 
   if (loading || (user && allowed === null)) return <Container sx={{ textAlign: 'center', mt: 8 }}><CircularProgress /></Container>
   if (!user) return <Navigate to="/login" state={{ from: location }} replace />
-  if (user && allowed === false) return <Container sx={{ textAlign: 'center', mt: 8 }}><h2>Access Denied</h2><p>Your account is not authorized to use this app.</p></Container>
+  if (user && allowed === false) {
+    signOut(auth)
+    return <Navigate to="/login" state={{ from: location }} replace />
+  }
   return <>{children}</>
 }
 
