@@ -7,6 +7,7 @@ import { getFirestore, collection, getDocs, query, where } from 'firebase/firest
 // import type { UI } from './data/uiConfigTypes'
 import './App.css'
 import UIpage from './pages/UIpage'
+import ColorSchemeEditorPage from './pages/ColorSchemeEditorPage'
 import { getUINames } from './data/getUI'
 
 // Firebase config (replace with your own config for production)
@@ -23,6 +24,8 @@ const app = initializeApp(firebaseConfig)
 const auth = getAuth(app)
 const provider = new GoogleAuthProvider()
 const db = getFirestore(app, 'promptor-db')
+
+export { app }
 
 function RequireAuth({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState(auth.currentUser)
@@ -179,6 +182,28 @@ function Home() {
         </Button>
       )}
       <Typography variant="h4" sx={{ textAlign: 'center', mb: 4, color: "#ffffff" }}>Select a UI</Typography>
+      
+      {/* Color Scheme Editor Button */}
+      <Box sx={{ display: 'flex', justifyContent: 'center', mb: 4 }}>
+        <Button
+          variant="contained"
+          onClick={() => navigate('/color-schemes')}
+          sx={{
+            backgroundColor: '#9c27b0',
+            color: '#ffffff',
+            px: 4,
+            py: 1.5,
+            fontSize: 16,
+            textTransform: 'none',
+            '&:hover': {
+              backgroundColor: '#7b1fa2'
+            }
+          }}
+        >
+          🎨 Color Scheme Editor
+        </Button>
+      </Box>
+      
       <Grid container spacing={4} justifyContent="center">
         {uiNames.map((uiName, idx) => (
           <Grid key={uiName} sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
@@ -214,8 +239,8 @@ function Navbar() {
     return onAuthStateChanged(auth, setUser)
   }, [])
   const location = useLocation();
-  // Hide Navbar on UI page
-  if (location.pathname.startsWith('/ui/')) return null;
+  // Hide Navbar on UI page and color scheme editor page
+  if (location.pathname.startsWith('/ui/') || location.pathname === '/color-schemes') return null;
   return (
     <nav style={{ display: 'flex', gap: 16, marginBottom: 24 }}>
       <Button variant="contained" color="primary" href="/" sx={{ textTransform: 'none' }}>Home</Button>
@@ -255,6 +280,7 @@ function App() {
         <Route path="/login" element={<Login />} />
         <Route path="/" element={<RequireAuth><Home /></RequireAuth>} />
         <Route path="/ui/:uiName" element={<RequireAuth><UIpageRouteWrapper /></RequireAuth>} />
+        <Route path="/color-schemes" element={<RequireAuth><ColorSchemeEditorPage /></RequireAuth>} />
       </Routes>
     </>
   )
