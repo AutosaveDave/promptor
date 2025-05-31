@@ -17,6 +17,6 @@ export type UISection = {
 export type UI = {
     template: string;
     fragments: Record<string, string>;
-    colors: Record<string, [string, string, string?, string?]>;
+    colors: Record<string, [string, string, string?, string?, string?, string?, string?, string?]>;
     ui: Record<string, UISection>;
 };

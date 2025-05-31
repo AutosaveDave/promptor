@@ -90,18 +90,22 @@ const UIpage: React.FC<UIPageProps> = ({ selectedUI }) => {
   };
 
   // Modal style
+  const modalColors = uiData.colors.modal || uiData.colors.bg || [undefined, undefined];
+  const [modalBg, modalText, promptBg, promptText, buttonBg, buttonText, buttonHoverBg, buttonHoverText] = modalColors;
   const modalStyle = {
     position: 'absolute' as const,
     top: '50%',
     left: '50%',
     transform: 'translate(-50%, -50%)',
-    bgcolor: 'background.paper',
+    bgcolor: modalBg,
+    color: modalText,
     boxShadow: 24,
     p: 4,
     minWidth: 350,
     maxWidth: '90vw',
     maxHeight: '80vh',
     overflow: 'auto',
+    borderRadius: 2,
   };
 
   // Check if all required fields are filled
@@ -302,16 +306,16 @@ const UIpage: React.FC<UIPageProps> = ({ selectedUI }) => {
       </Button>
       <Modal open={modalOpen} onClose={() => setModalOpen(false)}>
         <Box sx={modalStyle}>
-          <Typography variant="h6" gutterBottom>Generated Prompt</Typography>
-          <Box sx={{ whiteSpace: 'pre-wrap', mb: 2, maxHeight: 300, overflow: 'auto', background: '#f5f5f5', p: 2, borderRadius: 2 }}>
-            <div style={{ whiteSpace: 'pre-wrap', wordBreak: 'break-word', fontFamily: 'inherit', background: 'none', margin: 0 }}>
+          <Typography variant="h6" gutterBottom sx={{ color: modalText }}>Generated Prompt</Typography>
+          <Box sx={{ whiteSpace: 'pre-wrap', mb: 2, maxHeight: 300, overflow: 'auto', background: promptBg, p: 2, borderRadius: 2, color: promptText }}>
+            <div style={{ whiteSpace: 'pre-wrap', wordBreak: 'break-word', fontFamily: 'inherit', background: 'none', margin: 0, color: promptText }}>
               {generatedPrompt}
             </div>
           </Box>
-          <Button onClick={handleCopy} sx={{ mr: 1 }}>Copy</Button>
-          <Button onClick={handleSavePrompt} sx={{ mr: 1 }}>Save Prompt</Button>
-          <Button onClick={handleSaveInput} sx={{ mr: 1 }}>Save Input</Button>
-          <Button onClick={() => setModalOpen(false)} color="secondary">Close</Button>
+          <Button onClick={handleCopy} sx={{ mr: 1, color: buttonText, background: buttonBg, '&:hover': { background: buttonHoverBg, color: buttonHoverText } }}>Copy</Button>
+          <Button onClick={handleSavePrompt} sx={{ mr: 1, color: buttonText, background: buttonBg, '&:hover': { background: buttonHoverBg, color: buttonHoverText } }}>Save Prompt</Button>
+          <Button onClick={handleSaveInput} sx={{ mr: 1, color: buttonText, background: buttonBg, '&:hover': { background: buttonHoverBg, color: buttonHoverText } }}>Save Input</Button>
+          <Button onClick={() => setModalOpen(false)} color="secondary" sx={{ color: buttonText, background: buttonBg, '&:hover': { background: buttonHoverBg, color: buttonHoverText } }}>Close</Button>
         </Box>
       </Modal>
     </Container>
