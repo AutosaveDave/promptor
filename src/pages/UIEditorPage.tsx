@@ -4,8 +4,8 @@ import {
   Typography, IconButton, Checkbox, Chip
 } from "@mui/material";
 
-import { Add, Delete } from "@mui/icons-material";
-import { getFirestore, collection, getDocs } from "firebase/firestore";
+import { Add, Delete, Save } from "@mui/icons-material";
+import { getFirestore, collection, getDocs, addDoc, updateDoc, doc } from "firebase/firestore";
 import { app } from "../App"; // adjust import if needed
 import type { UIComponent, UISection as UISectionType } from "../data/uiConfigTypes";
 
@@ -35,6 +35,10 @@ const UIEditorPage: React.FC = () => {  const [template, setTemplate] = useState
   const [selectedScheme, setSelectedScheme] = useState<ColorScheme | null>(null);
   const [sections, setSections] = useState<UISectionType[]>([]);
   const [fragments, setFragments] = useState<{ ref: string; text: string }[]>([]);
+  
+  // State for editing existing UI
+  const [editingUIId, setEditingUIId] = useState<string | null>(null);
+  const [isSaving, setIsSaving] = useState(false);
     // Ref for editable Typography
   const editableRef = useRef<HTMLDivElement | null>(null);
   // Sync editable content when template changes from external sources
@@ -128,8 +132,52 @@ const UIEditorPage: React.FC = () => {  const [template, setTemplate] = useState
     sel.addRange(range);
     // Update template state
     setTemplate(el.innerText.replace(/\u200B/g, ''));
-  };  // (Removed duplicate state declarations)
-  // Fetch color schemes from Firestore
+  };  // Save UI to Firestore
+  const handleSaveUI = async () => {
+    if (!title.trim()) {
+      alert("Please enter a UI title before saving.");
+      return;
+    }
+
+    if (invalidRefs.length > 0) {
+      alert("Cannot save: Invalid template refs highlighted in red.");
+      return;
+    }
+
+    setIsSaving(true);
+    try {
+      const db = getFirestore(app, "promptor-db");
+      const uiConfig = {
+        title: title.trim(),
+        colorScheme: selectedScheme,
+        sections,
+        fragments,
+        template,
+        updatedAt: new Date(),
+      };
+
+      if (editingUIId) {
+        // Update existing UI
+        const uiDocRef = doc(db, "UIs", editingUIId);
+        await updateDoc(uiDocRef, uiConfig);
+        alert("UI updated successfully!");
+      } else {
+        // Create new UI
+        const uiConfigWithCreatedAt = {
+          ...uiConfig,
+          createdAt: new Date(),
+        };
+        const docRef = await addDoc(collection(db, "UIs"), uiConfigWithCreatedAt);
+        setEditingUIId(docRef.id);
+        alert("UI saved successfully!");
+      }
+    } catch (error) {
+      console.error("Error saving UI:", error);
+      alert("Error saving UI. Please try again.");
+    } finally {
+      setIsSaving(false);
+    }
+  };
   useEffect(() => {
     const fetchSchemes = async () => {
       const db = getFirestore(app, "promptor-db");
@@ -426,8 +474,8 @@ const updateInput = (
               component="div"
               sx={{
                 fontFamily: 'monospace',
-                fontSize: '1rem',
-                lineHeight: 1.5,
+                fontSize: '14px',
+                lineHeight: '20px',
                 whiteSpace: 'pre-wrap',
                 wordBreak: 'break-word',
                 minHeight: 250,
@@ -451,6 +499,8 @@ const updateInput = (
                 display: 'block',
                 width: '100%',
                 height: '100%',
+                letterSpacing: 'normal',
+                wordSpacing: 'normal',
               }}
             >
               {getHighlightedTemplate(template)}
@@ -465,8 +515,8 @@ const updateInput = (
               spellCheck={false}
               sx={{
                 fontFamily: 'monospace',
-                fontSize: '1rem',
-                lineHeight: 1.5,
+                fontSize: '14px',
+                lineHeight: '20px',
                 whiteSpace: 'pre-wrap',
                 wordBreak: 'break-word',
                 minHeight: 250,
@@ -484,10 +534,50 @@ const updateInput = (
                 position: 'relative',
                 zIndex: 2,
                 caretColor: '#ffe6a7',
+                letterSpacing: 'normal',
+                wordSpacing: 'normal',
                 '& ::selection': {
                   background: 'rgba(255, 230, 167, 0.3)',
                 },
-              }}              onInput={e => {
+              }}              onKeyDown={e => {
+                if (e.key === 'Enter') {
+                  e.preventDefault();
+                  const selection = window.getSelection();
+                  if (selection && selection.rangeCount > 0) {
+                    const range = selection.getRangeAt(0);
+                    range.deleteContents();
+                    
+                    // Insert newline and a zero-width space to help with cursor positioning
+                    const textNode = document.createTextNode('\n');
+                    range.insertNode(textNode);
+                    
+                    // Position cursor after the newline
+                    range.setStartAfter(textNode);
+                    range.collapse(true);
+                    selection.removeAllRanges();
+                    selection.addRange(range);
+                    
+                    // Force the editor to scroll to cursor if needed
+                    const el = e.currentTarget as HTMLDivElement;
+                    setTimeout(() => {
+                      if (selection.rangeCount > 0) {
+                        const rect = selection.getRangeAt(0).getBoundingClientRect();
+                        const editorRect = el.getBoundingClientRect();
+                        if (rect.bottom > editorRect.bottom - 20) {
+                          el.scrollTop += (rect.bottom - editorRect.bottom + 20);
+                        }
+                      }
+                    }, 0);
+                    
+                    // Update template state
+                    const newText = el.innerText.replace(/\u200B/g, '');
+                    if (newText !== template) {
+                      setTemplate(newText);
+                    }
+                  }
+                }
+              }}
+              onInput={e => {
                 const el = e.currentTarget as HTMLDivElement;
                 const newText = el.innerText.replace(/\u200B/g, '');
                 // Update state immediately but check if it actually changed
@@ -522,33 +612,25 @@ const updateInput = (
             ))}
           </Box>
         </Box>
-      </Box>
-
-      {/* Save/Export UI config */}
+      </Box>      {/* Save/Export UI config */}
       <Box sx={{ mt: 4 }}>
         <Button
           variant="contained"
+          startIcon={<Save />}
           sx={{ background: '#bb9457', color: '#23272f', fontWeight: 600, '&:hover': { background: '#ffe6a7' } }}
-          disabled={invalidRefs.length > 0}
-          onClick={() => {
-            // Export or save logic here
-            const uiConfig = {
-              title,
-              colorScheme: selectedScheme,
-              sections,
-              fragments,
-              template,
-            };
-            // For now, just log to console
-            console.log(uiConfig);
-            alert("UI config exported to console!");
-          }}
+          disabled={invalidRefs.length > 0 || isSaving || !title.trim()}
+          onClick={handleSaveUI}
         >
-          Save/Export UI
+          {isSaving ? 'Saving...' : editingUIId ? 'Update UI' : 'Save UI'}
         </Button>
         {invalidRefs.length > 0 && (
           <Typography color="error" sx={{ mt: 1 }}>
             Cannot save: Invalid template refs highlighted in red.
+          </Typography>
+        )}
+        {!title.trim() && (
+          <Typography color="warning" sx={{ mt: 1 }}>
+            Please enter a UI title before saving.
           </Typography>
         )}
       </Box>
