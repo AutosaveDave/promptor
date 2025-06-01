@@ -8,6 +8,7 @@ import { getFirestore, collection, getDocs, query, where } from 'firebase/firest
 import './App.css'
 import UIpage from './pages/UIpage'
 import ColorSchemeEditorPage from './pages/ColorSchemeEditorPage'
+import UIEditorPage from './pages/UIEditorPage'
 import { getUINames } from './data/getUI'
 
 // Firebase config (replace with your own config for production)
@@ -183,8 +184,8 @@ function Home() {
       )}
       <Typography variant="h4" sx={{ textAlign: 'center', mb: 4, color: "#ffffff" }}>Select a UI</Typography>
       
-      {/* Color Scheme Editor Button */}
-      <Box sx={{ display: 'flex', justifyContent: 'center', mb: 4 }}>
+      {/* Color Scheme Editor & UI Editor Buttons */}
+      <Box sx={{ display: 'flex', justifyContent: 'center', gap: 2, mb: 4 }}>
         <Button
           variant="contained"
           onClick={() => navigate('/color-schemes')}
@@ -202,6 +203,26 @@ function Home() {
         >
           🎨 Color Scheme Editor
         </Button>
+        {user && (
+          <Button
+            variant="contained"
+            onClick={() => navigate('/ui-editor')}
+            sx={{
+              backgroundColor: '#ffce54',
+              color: '#23272f',
+              px: 4,
+              py: 1.5,
+              fontSize: 16,
+              fontWeight: 600,
+              textTransform: 'none',
+              '&:hover': {
+                backgroundColor: '#ffe6a7'
+              }
+            }}
+          >
+            🛠️ UI Editor
+          </Button>
+        )}
       </Box>
       
       <Grid container spacing={4} justifyContent="center">
@@ -281,6 +302,7 @@ function App() {
         <Route path="/" element={<RequireAuth><Home /></RequireAuth>} />
         <Route path="/ui/:uiName" element={<RequireAuth><UIpageRouteWrapper /></RequireAuth>} />
         <Route path="/color-schemes" element={<RequireAuth><ColorSchemeEditorPage /></RequireAuth>} />
+        <Route path="/ui-editor" element={<RequireAuth><UIEditorPage /></RequireAuth>} />
       </Routes>
     </>
   )
