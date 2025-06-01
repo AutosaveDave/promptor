@@ -162,16 +162,45 @@ const uiButtonColors: string[] = [
 //   "#ffd166", "#0c637f", "#83d483", 
 //   "#073b4c", "#06d6a0", "#ef476f"
 
+
 function Home() {
   const navigate = useNavigate();
   const [user, setUser] = useState(auth.currentUser);
   const [uiList, setUiList] = useState<{ id: string; title: string }[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [isAdmin, setIsAdmin] = useState<boolean>(false);
+  const [checkingAdmin, setCheckingAdmin] = useState(true);
 
   useEffect(() => {
     return onAuthStateChanged(auth, setUser);
   }, []);
+
+  // Check admin status
+  useEffect(() => {
+    const checkAdmin = async () => {
+      setCheckingAdmin(true);
+      if (user && user.email) {
+        try {
+          const db = getFirestore(app, 'promptor-db');
+          const q = query(collection(db, 'users'), where('email', '==', user.email));
+          const snapshot = await getDocs(q);
+          if (!snapshot.empty) {
+            const docData = snapshot.docs[0].data();
+            setIsAdmin(!!docData.admin);
+          } else {
+            setIsAdmin(false);
+          }
+        } catch {
+          setIsAdmin(false);
+        }
+      } else {
+        setIsAdmin(false);
+      }
+      setCheckingAdmin(false);
+    };
+    checkAdmin();
+  }, [user]);
 
   useEffect(() => {
     const fetchUIs = async () => {
@@ -213,44 +242,46 @@ function Home() {
       )}
       <Typography variant="h4" sx={{ textAlign: 'center', mb: 4, color: "#ffffff" }}>Select a UI</Typography>
 
-      {/* Color Scheme Editor & UI Editor Buttons */}
+      {/* Color Scheme Editor & UI Editor Buttons (admin only) */}
       <Box sx={{ display: 'flex', justifyContent: 'center', gap: 2, mb: 4 }}>
-        <Button
-          variant="contained"
-          onClick={() => navigate('/color-schemes')}
-          sx={{
-            backgroundColor: '#9c27b0',
-            color: '#ffffff',
-            px: 4,
-            py: 1.5,
-            fontSize: 16,
-            textTransform: 'none',
-            '&:hover': {
-              backgroundColor: '#7b1fa2'
-            }
-          }}
-        >
-          🎨 Color Scheme Editor
-        </Button>
-        {user && (
-          <Button
-            variant="contained"
-            onClick={() => navigate('/ui-editor')}
-            sx={{
-              backgroundColor: '#ffce54',
-              color: '#23272f',
-              px: 4,
-              py: 1.5,
-              fontSize: 16,
-              fontWeight: 600,
-              textTransform: 'none',
-              '&:hover': {
-                backgroundColor: '#ffe6a7'
-              }
-            }}
-          >
-            🛠️ UI Editor
-          </Button>
+        {isAdmin && !checkingAdmin && (
+          <>
+            <Button
+              variant="contained"
+              onClick={() => navigate('/color-schemes')}
+              sx={{
+                backgroundColor: '#9c27b0',
+                color: '#ffffff',
+                px: 4,
+                py: 1.5,
+                fontSize: 16,
+                textTransform: 'none',
+                '&:hover': {
+                  backgroundColor: '#7b1fa2'
+                }
+              }}
+            >
+              🎨 Color Scheme Editor
+            </Button>
+            <Button
+              variant="contained"
+              onClick={() => navigate('/ui-editor')}
+              sx={{
+                backgroundColor: '#ffce54',
+                color: '#23272f',
+                px: 4,
+                py: 1.5,
+                fontSize: 16,
+                fontWeight: 600,
+                textTransform: 'none',
+                '&:hover': {
+                  backgroundColor: '#ffe6a7'
+                }
+              }}
+            >
+              🛠️ UI Editor
+            </Button>
+          </>
         )}
       </Box>
 
@@ -282,25 +313,27 @@ function Home() {
                 >
                   {ui.title}
                 </Button>
-                <IconButton
-                  aria-label="Edit UI"
-                  size="small"
-                  sx={{
-                    position: 'absolute',
-                    top: 8,
-                    right: 8,
-                    background: '#fff',
-                    color: '#23272f',
-                    zIndex: 2,
-                    '&:hover': { background: '#ffe6a7' },
-                  }}
-                  onClick={e => {
-                    e.stopPropagation();
-                    navigate(`/ui-editor/${ui.id}`);
-                  }}
-                >
-                  <Edit fontSize="small" />
-                </IconButton>
+                {isAdmin && !checkingAdmin && (
+                  <IconButton
+                    aria-label="Edit UI"
+                    size="small"
+                    sx={{
+                      position: 'absolute',
+                      top: 8,
+                      right: 8,
+                      background: '#fff',
+                      color: '#23272f',
+                      zIndex: 2,
+                      '&:hover': { background: '#ffe6a7' },
+                    }}
+                    onClick={e => {
+                      e.stopPropagation();
+                      navigate(`/ui-editor/${ui.id}`);
+                    }}
+                  >
+                    <Edit fontSize="small" />
+                  </IconButton>
+                )}
               </Box>
             </Grid>
           ))}
