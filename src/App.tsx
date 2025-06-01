@@ -4,14 +4,12 @@ import { CssBaseline, Container, CircularProgress, Grid, Paper, Button, TextFiel
 import { initializeApp } from 'firebase/app'
 import { getAuth, onAuthStateChanged, signInWithPopup, GoogleAuthProvider, signOut, signInWithEmailAndPassword } from 'firebase/auth'
 import { getFirestore, collection, getDocs, query, where } from 'firebase/firestore'
-// import type { UI } from './data/uiConfigTypes'
 import './App.css'
 import UIpage from './pages/UIpage'
 import ColorSchemeEditorPage from './pages/ColorSchemeEditorPage'
 import UIEditorPage from './pages/UIEditorPage'
-import { getUINames } from './data/getUI'
 
-// Firebase config (replace with your own config for production)
+// Remove getUINames import if present
 const firebaseConfig = {
   apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
   authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,
@@ -164,12 +162,42 @@ const uiButtonColors: string[] = [
 //   "#073b4c", "#06d6a0", "#ef476f"
 
 function Home() {
-  const navigate = useNavigate()
-  const uiNames = getUINames();
-  const [user, setUser] = useState(auth.currentUser)
+  const navigate = useNavigate();
+  const [user, setUser] = useState(auth.currentUser);
+  const [uiList, setUiList] = useState<{ id: string; title: string }[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
   useEffect(() => {
-    return onAuthStateChanged(auth, setUser)
-  }, [])
+    return onAuthStateChanged(auth, setUser);
+  }, []);
+
+  useEffect(() => {
+    const fetchUIs = async () => {
+      setLoading(true);
+      setError(null);
+      try {
+        const db = getFirestore(app, 'promptor-db');
+        const q = query(collection(db, 'UIs'));
+        const snapshot = await getDocs(q);
+        // Get up to 12 unique UI titles with their Firestore IDs
+        const list: { id: string; title: string }[] = [];
+        snapshot.forEach(doc => {
+          const data = doc.data();
+          if (typeof data.title === 'string' && data.title.trim() && !list.some(u => u.title === data.title.trim())) {
+            list.push({ id: doc.id, title: data.title.trim() });
+          }
+        });
+        setUiList(list.slice(0, 12));
+      } catch (err) {
+        setError('Failed to load UI list');
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchUIs();
+  }, []);
+
   return (
     <Box sx={{ position: 'relative', overflowY: 'auto' }}>
       {user && (
@@ -183,7 +211,7 @@ function Home() {
         </Button>
       )}
       <Typography variant="h4" sx={{ textAlign: 'center', mb: 4, color: "#ffffff" }}>Select a UI</Typography>
-      
+
       {/* Color Scheme Editor & UI Editor Buttons */}
       <Box sx={{ display: 'flex', justifyContent: 'center', gap: 2, mb: 4 }}>
         <Button
@@ -224,34 +252,40 @@ function Home() {
           </Button>
         )}
       </Box>
-      
-      <Grid container spacing={4} justifyContent="center">
-        {uiNames.map((uiName, idx) => (
-          <Grid key={uiName} sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
-            <Button
-              variant="contained"
-              sx={{
-                width: 180,
-                height: 180,
-                fontSize: 24,
-                borderRadius: 4,
-                textTransform: 'none',
-                backgroundColor: uiButtonColors[idx % uiButtonColors.length],
-                color: '#000000',
-                '&:hover': {
+
+      {loading ? (
+        <Box sx={{ textAlign: 'center', mt: 8 }}><CircularProgress /></Box>
+      ) : error ? (
+        <Typography color="error" sx={{ textAlign: 'center', mt: 4 }}>{error}</Typography>
+      ) : (
+        <Grid container spacing={4} justifyContent="center">
+          {uiList.map((ui, idx) => (
+            <Grid key={ui.id} sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
+              <Button
+                variant="contained"
+                sx={{
+                  width: 180,
+                  height: 180,
+                  fontSize: 24,
+                  borderRadius: 4,
+                  textTransform: 'none',
                   backgroundColor: uiButtonColors[idx % uiButtonColors.length],
-                  opacity: 0.9,
-                }
-              }}
-              onClick={() => navigate(`/ui/${uiName}`)}
-            >
-              {uiName}
-            </Button>
-          </Grid>
-        ))}
-      </Grid>
+                  color: '#000000',
+                  '&:hover': {
+                    backgroundColor: uiButtonColors[idx % uiButtonColors.length],
+                    opacity: 0.9,
+                  }
+                }}
+                onClick={() => navigate(`/ui/${ui.id}`)}
+              >
+                {ui.title}
+              </Button>
+            </Grid>
+          ))}
+        </Grid>
+      )}
     </Box>
-  )
+  );
 }
 
 function Navbar() {
