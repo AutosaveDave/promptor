@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Routes, Route, Navigate, useLocation, useParams, useNavigate } from 'react-router-dom'
-import { CssBaseline, Container, CircularProgress, Grid, Paper, Button, TextField, Typography, Box } from '@mui/material'
+import { CssBaseline, Container, CircularProgress, Grid, Paper, Button, TextField, Typography, Box, IconButton } from '@mui/material'
+import { Edit } from '@mui/icons-material';
 import { initializeApp } from 'firebase/app'
 import { getAuth, onAuthStateChanged, signInWithPopup, GoogleAuthProvider, signOut, signInWithEmailAndPassword } from 'firebase/auth'
 import { getFirestore, collection, getDocs, query, where } from 'firebase/firestore'
@@ -260,26 +261,47 @@ function Home() {
       ) : (
         <Grid container spacing={4} justifyContent="center">
           {uiList.map((ui, idx) => (
-            <Grid key={ui.id} sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
-              <Button
-                variant="contained"
-                sx={{
-                  width: 180,
-                  height: 180,
-                  fontSize: 24,
-                  borderRadius: 4,
-                  textTransform: 'none',
-                  backgroundColor: uiButtonColors[idx % uiButtonColors.length],
-                  color: '#000000',
-                  '&:hover': {
+            <Grid key={ui.id} sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', position: 'relative' }}>
+              <Box sx={{ position: 'relative', width: 180, height: 180 }}>
+                <Button
+                  variant="contained"
+                  sx={{
+                    width: 180,
+                    height: 180,
+                    fontSize: 24,
+                    borderRadius: 4,
+                    textTransform: 'none',
                     backgroundColor: uiButtonColors[idx % uiButtonColors.length],
-                    opacity: 0.9,
-                  }
-                }}
-                onClick={() => navigate(`/ui/${ui.id}`)}
-              >
-                {ui.title}
-              </Button>
+                    color: '#000000',
+                    '&:hover': {
+                      backgroundColor: uiButtonColors[idx % uiButtonColors.length],
+                      opacity: 0.9,
+                    }
+                  }}
+                  onClick={() => navigate(`/ui/${ui.id}`)}
+                >
+                  {ui.title}
+                </Button>
+                <IconButton
+                  aria-label="Edit UI"
+                  size="small"
+                  sx={{
+                    position: 'absolute',
+                    top: 8,
+                    right: 8,
+                    background: '#fff',
+                    color: '#23272f',
+                    zIndex: 2,
+                    '&:hover': { background: '#ffe6a7' },
+                  }}
+                  onClick={e => {
+                    e.stopPropagation();
+                    navigate(`/ui-editor/${ui.id}`);
+                  }}
+                >
+                  <Edit fontSize="small" />
+                </IconButton>
+              </Box>
             </Grid>
           ))}
         </Grid>
@@ -323,6 +345,11 @@ function UIpageRouteWrapper() {
   )
 }
 
+function UIEditorRouteWrapper() {
+  const { uiId } = useParams();
+  return <UIEditorPage editingUIId={uiId || null} />;
+}
+
 function App() {
   const location = useLocation();
   const isLogin = location.pathname === '/login';
@@ -337,6 +364,7 @@ function App() {
         <Route path="/ui/:uiName" element={<RequireAuth><UIpageRouteWrapper /></RequireAuth>} />
         <Route path="/color-schemes" element={<RequireAuth><ColorSchemeEditorPage /></RequireAuth>} />
         <Route path="/ui-editor" element={<RequireAuth><UIEditorPage /></RequireAuth>} />
+        <Route path="/ui-editor/:uiId" element={<RequireAuth><UIEditorRouteWrapper /></RequireAuth>} />
       </Routes>
     </>
   )

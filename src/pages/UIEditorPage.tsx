@@ -5,7 +5,7 @@ import {
 } from "@mui/material";
 
 import { Add, Delete, Save } from "@mui/icons-material";
-import { getFirestore, collection, getDocs, addDoc, updateDoc, doc } from "firebase/firestore";
+import { getFirestore, collection, getDocs, addDoc, updateDoc, doc, query } from "firebase/firestore";
 import { app } from "../App"; // adjust import if needed
 import type { UIComponent, UISection as UISectionType } from "../data/uiConfigTypes";
 
@@ -29,7 +29,12 @@ const CHIP_COLORS = [
 const CHIP_COLORS_NO_RED = CHIP_COLORS.filter(c => !['#F50057', '#C51162', '#FF6D00', '#FF1744', '#D50000'].includes(c));
 
 
-const UIEditorPage: React.FC = () => {  const [template, setTemplate] = useState("");
+interface UIEditorPageProps {
+  editingUIId?: string | null;
+}
+
+const UIEditorPage: React.FC<UIEditorPageProps> = ({ editingUIId: propEditingUIId = null }) => {
+  const [template, setTemplate] = useState("");
   const [title, setTitle] = useState("");
   const [colorSchemes, setColorSchemes] = useState<ColorScheme[]>([]);
   const [selectedScheme, setSelectedScheme] = useState<ColorScheme | null>(null);
@@ -37,7 +42,37 @@ const UIEditorPage: React.FC = () => {  const [template, setTemplate] = useState
   const [fragments, setFragments] = useState<{ ref: string; text: string }[]>([]);
   
   // State for editing existing UI
-  const [editingUIId, setEditingUIId] = useState<string | null>(null);
+  const [editingUIId, setEditingUIId] = useState<string | null>(propEditingUIId);
+  // Load UI for editing if editingUIId is provided
+  useEffect(() => {
+    if (propEditingUIId) {
+      setEditingUIId(propEditingUIId);
+      const fetchUI = async () => {
+        try {
+          const db = getFirestore(app, "promptor-db");
+          const uiSnap = await getDocs(query(collection(db, "UIs")));
+          const docSnap = uiSnap.docs.find(doc => doc.id === propEditingUIId);
+          if (docSnap) {
+            const data = docSnap.data() as {
+              title?: string;
+              colorScheme?: ColorScheme | null;
+              sections?: UISectionType[];
+              fragments?: { ref: string; text: string }[];
+              template?: string;
+            };
+            setTitle(data?.title || "");
+            setSelectedScheme(data?.colorScheme || null);
+            setSections(Array.isArray(data?.sections) ? data.sections : []);
+            setFragments(Array.isArray(data?.fragments) ? data.fragments : []);
+            setTemplate(data?.template || "");
+          }
+        } catch {
+          // Optionally handle error
+        }
+      };
+      fetchUI();
+    }
+  }, [propEditingUIId]);
   const [isSaving, setIsSaving] = useState(false);
     // Ref for editable Typography
   const editableRef = useRef<HTMLDivElement | null>(null);
@@ -301,6 +336,21 @@ const updateInput = (
                   InputProps={{ style: { background: inputBg, color: inputText } }}
                   InputLabelProps={{ style: { color: inputText } }}
                 />
+                {/* Fixed checkbox for the first section only */}
+                {sIdx === 0 && (
+                  <FormControl sx={{ mr: 2, flexDirection: 'row', alignItems: 'center', display: 'flex' }}>
+                    <Checkbox
+                      checked={!!section.fixed}
+                      onChange={e => {
+                        const updated = [...sections];
+                        updated[sIdx].fixed = e.target.checked;
+                        setSections(updated);
+                      }}
+                      sx={{ color: '#ffce54', p: 0, mr: 1 }}
+                    />
+                    <Typography sx={{ color: inputText, fontSize: 14 }}>Fixed</Typography>
+                  </FormControl>
+                )}
                 <FormControl sx={{ minWidth: 120, mr: 2 }}>
                   <InputLabel sx={{ color: inputText }}>Color</InputLabel>
                   <Select
@@ -468,137 +518,159 @@ const updateInput = (
       {/* Template Section */}
       <Box sx={{ mt: 4, display: 'flex', alignItems: 'flex-start', gap: 2 }}>        <Box sx={{ flex: 1, minWidth: 0, position: 'relative', height: '100%' }}>
           <Typography variant="subtitle1" sx={{ color: '#ffe6a7', mb: 1, fontWeight: 600 }}>Prompt Template</Typography>
-          <Box sx={{ position: 'relative' }}>            {/* Syntax highlighting overlay - background layer */}
-            <Typography
-              variant="body1"
-              component="div"
+          <Box
+            sx={{
+              position: 'relative',
+              minHeight: 250,
+              maxHeight: 500,
+              borderRadius: 2,
+              border: '1px solid #444',
+              boxSizing: 'border-box',
+              margin: 0,
+              textAlign: 'left',
+              background: '#353b48',
+              overflow: 'hidden',
+              padding: 0,
+            }}
+          >
+            {/* Scrollable content area for both layers */}
+            <Box
               sx={{
-                fontFamily: 'monospace',
-                fontSize: '14px',
-                lineHeight: '20px',
-                whiteSpace: 'pre-wrap',
-                wordBreak: 'break-word',
-                minHeight: 250,
-                maxHeight: 500,
-                overflow: 'hidden',
-                background: '#353b48',
-                borderRadius: 2,
-                border: '1px solid #444',
-                boxSizing: 'border-box',
-                padding: '16.5px 14px',
-                margin: 0,
-                textAlign: 'left',
-                position: 'absolute',
-                top: 0,
-                left: 0,
-                right: 0,
-                bottom: 0,
-                pointerEvents: 'none',
-                zIndex: 1,
-                color: '#ffe6a7',
-                display: 'block',
-                width: '100%',
-                height: '100%',
-                letterSpacing: 'normal',
-                wordSpacing: 'normal',
-              }}
-            >
-              {getHighlightedTemplate(template)}
-            </Typography>
-            {/* Actual editable text input - foreground layer */}
-            <Typography
-              ref={editableRef}
-              variant="body1"
-              component="div"
-              contentEditable
-              suppressContentEditableWarning
-              spellCheck={false}
-              sx={{
-                fontFamily: 'monospace',
-                fontSize: '14px',
-                lineHeight: '20px',
-                whiteSpace: 'pre-wrap',
-                wordBreak: 'break-word',
+                position: 'relative',
                 minHeight: 250,
                 maxHeight: 500,
                 overflow: 'auto',
-                background: 'transparent',
-                color: 'transparent',
-                borderRadius: 2,
-                border: '1px solid #444',
-                boxSizing: 'border-box',
-                padding: '16.5px 14px',
-                outline: 'none',
-                margin: 0,
-                textAlign: 'left',
-                position: 'relative',
-                zIndex: 2,
-                caretColor: '#ffe6a7',
-                letterSpacing: 'normal',
-                wordSpacing: 'normal',
-                '& ::selection': {
-                  background: 'rgba(255, 230, 167, 0.3)',
-                },
-              }}              onKeyDown={e => {
-                if (e.key === 'Enter') {
-                  e.preventDefault();
-                  const selection = window.getSelection();
-                  if (selection && selection.rangeCount > 0) {
-                    const range = selection.getRangeAt(0);
-                    range.deleteContents();
-                    
-                    // Insert newline and a zero-width space to help with cursor positioning
-                    const textNode = document.createTextNode('\n');
-                    range.insertNode(textNode);
-                    
-                    // Position cursor after the newline
-                    range.setStartAfter(textNode);
-                    range.collapse(true);
-                    selection.removeAllRanges();
-                    selection.addRange(range);
-                    
-                    // Force the editor to scroll to cursor if needed
-                    const el = e.currentTarget as HTMLDivElement;
-                    setTimeout(() => {
-                      if (selection.rangeCount > 0) {
-                        const rect = selection.getRangeAt(0).getBoundingClientRect();
-                        const editorRect = el.getBoundingClientRect();
-                        if (rect.bottom > editorRect.bottom - 20) {
-                          el.scrollTop += (rect.bottom - editorRect.bottom + 20);
+                width: '100%',
+                height: '100%',
+              }}
+            >
+              {/* Syntax highlighting overlay - background layer */}
+              <Typography
+                variant="body1"
+                component="div"
+                sx={{
+                  fontFamily: 'monospace',
+                  fontSize: '14px',
+                  lineHeight: '20px',
+                  whiteSpace: 'pre-wrap',
+                  wordBreak: 'break-word',
+                  minHeight: 250,
+                  maxHeight: 500,
+                  background: 'none',
+                  borderRadius: 2,
+                  boxSizing: 'border-box',
+                  padding: '16.5px 14px',
+                  margin: 0,
+                  textAlign: 'left',
+                  color: '#ffe6a7',
+                  display: 'block',
+                  width: '100%',
+                  height: '100%',
+                  letterSpacing: 'normal',
+                  wordSpacing: 'normal',
+                  pointerEvents: 'none',
+                  position: 'absolute',
+                  top: 0,
+                  left: 0,
+                  zIndex: 1,
+                }}
+              >
+                {getHighlightedTemplate(template)}
+              </Typography>
+              {/* Actual editable text input - foreground layer */}
+              <Typography
+                ref={editableRef}
+                variant="body1"
+                component="div"
+                contentEditable
+                suppressContentEditableWarning
+                spellCheck={false}
+                sx={{
+                  fontFamily: 'monospace',
+                  fontSize: '14px',
+                  lineHeight: '20px',
+                  whiteSpace: 'pre-wrap',
+                  wordBreak: 'break-word',
+                  minHeight: 250,
+                  maxHeight: 500,
+                  background: 'transparent',
+                  color: 'transparent',
+                  borderRadius: 2,
+                  boxSizing: 'border-box',
+                  padding: '16.5px 14px',
+                  outline: 'none',
+                  margin: 0,
+                  textAlign: 'left',
+                  position: 'relative',
+                  zIndex: 2,
+                  caretColor: '#ffe6a7',
+                  letterSpacing: 'normal',
+                  wordSpacing: 'normal',
+                  '& ::selection': {
+                    background: 'rgba(255, 230, 167, 0.3)',
+                  },
+                  width: '100%',
+                  height: '100%',
+                }}
+                onKeyDown={e => {
+                  if (e.key === 'Enter') {
+                    e.preventDefault();
+                    const selection = window.getSelection();
+                    if (selection && selection.rangeCount > 0) {
+                      const range = selection.getRangeAt(0);
+                      range.deleteContents();
+                      // Insert newline and a zero-width space to help with cursor positioning
+                      const textNode = document.createTextNode('\n');
+                      range.insertNode(textNode);
+                      // Position cursor after the newline
+                      range.setStartAfter(textNode);
+                      range.collapse(true);
+                      selection.removeAllRanges();
+                      selection.addRange(range);
+                      // Force the editor to scroll to cursor if needed
+                      const el = e.currentTarget as HTMLDivElement;
+                      setTimeout(() => {
+                        if (selection.rangeCount > 0) {
+                          const rect = selection.getRangeAt(0).getBoundingClientRect();
+                          const editorRect = el.getBoundingClientRect();
+                          if (rect.bottom > editorRect.bottom - 20) {
+                            el.scrollTop += (rect.bottom - editorRect.bottom + 20);
+                          }
                         }
+                      }, 0);
+                      // Update template state
+                      const newText = el.innerText.replace(/\u200B/g, '');
+                      if (newText !== template) {
+                        setTemplate(newText);
                       }
-                    }, 0);
-                    
-                    // Update template state
-                    const newText = el.innerText.replace(/\u200B/g, '');
-                    if (newText !== template) {
-                      setTemplate(newText);
                     }
                   }
-                }
-              }}
-              onInput={e => {
-                const el = e.currentTarget as HTMLDivElement;
-                const newText = el.innerText.replace(/\u200B/g, '');
-                // Update state immediately but check if it actually changed
-                if (newText !== template) {
-                  setTemplate(newText);
-                }
-              }}
-              onBlur={e => {
-                const el = e.currentTarget as HTMLDivElement;
-                const newText = el.innerText.replace(/\u200B/g, '');
-                if (newText !== template) {
-                  setTemplate(newText);
-                }
-              }}
-              aria-label="Prompt Template"
-              tabIndex={0}
-              role="textbox"
-              autoCorrect="off"
-              autoCapitalize="off"              dir="ltr"
-            />
+                }}
+                onInput={e => {
+                  const el = e.currentTarget as HTMLDivElement;
+                  const newText = el.innerText.replace(/\u200B/g, '');
+                  // Update state immediately but check if it actually changed
+                  if (newText !== template) {
+                    setTemplate(newText);
+                  }
+                }}
+                onBlur={e => {
+                  const el = e.currentTarget as HTMLDivElement;
+                  const newText = el.innerText.replace(/\u200B/g, '');
+                  if (newText !== template) {
+                    setTemplate(newText);
+                  }
+                }}
+                aria-label="Prompt Template"
+                tabIndex={0}
+                role="textbox"
+                autoCorrect="off"
+                autoCapitalize="off"
+                dir="ltr"
+              />
+            </Box>
           </Box>
+          
         </Box>
         <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1, flex: '0 0 220px', alignItems: 'flex-end', minWidth: 180 }}>
           <Typography variant="subtitle2" sx={{ color: '#ffe6a7', mb: 1, fontWeight: 600 }}>Refs</Typography>
