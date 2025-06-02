@@ -168,6 +168,22 @@ const UIEditorPage: React.FC<UIEditorPageProps> = ({ editingUIId: propEditingUII
     // Update template state
     setTemplate(el.innerText.replace(/\u200B/g, ''));
   };  // Save UI to Firestore
+  // Helper to deeply remove undefined fields from objects/arrays
+  function removeUndefinedFields(obj: any): any {
+    if (Array.isArray(obj)) {
+      return obj.map(removeUndefinedFields);
+    } else if (obj && typeof obj === 'object') {
+      const cleaned: any = {};
+      Object.entries(obj).forEach(([key, value]) => {
+        if (value !== undefined) {
+          cleaned[key] = removeUndefinedFields(value);
+        }
+      });
+      return cleaned;
+    }
+    return obj;
+  }
+
   const handleSaveUI = async () => {
     if (!title.trim()) {
       alert("Please enter a UI title before saving.");
@@ -182,11 +198,14 @@ const UIEditorPage: React.FC<UIEditorPageProps> = ({ editingUIId: propEditingUII
     setIsSaving(true);
     try {
       const db = getFirestore(app, "promptor-db");
+      // Clean undefined fields from sections and fragments
+      const cleanedSections = removeUndefinedFields(sections);
+      const cleanedFragments = removeUndefinedFields(fragments);
       const uiConfig = {
         title: title.trim(),
         colorScheme: selectedScheme,
-        sections,
-        fragments,
+        sections: cleanedSections,
+        fragments: cleanedFragments,
         template,
         updatedAt: new Date(),
       };

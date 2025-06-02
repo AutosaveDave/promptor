@@ -373,7 +373,7 @@ const UIpage: React.FC<UIPageProps> = ({ selectedUI }) => {
                     </TextField>
                   );
                 }
-                if (comp.type === 'textarea') {
+                if (comp.type.toLowerCase() === 'textarea') {
                   return (
                     <TextField
                       key={comp.ref}
