@@ -691,14 +691,29 @@ const updateInput = (
           </Box>
           
         </Box>
-        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1, flex: '0 0 220px', alignItems: 'flex-end', minWidth: 180 }}>
+        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1, flex: '0 0 220px', alignItems: 'flex-center', minWidth: { xs: 140, sm: 180 } }}>
           <Typography variant="subtitle2" sx={{ color: '#ffe6a7', mb: 1, fontWeight: 600 }}>Refs</Typography>
           <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, justifyContent: 'flex-end' }}>            {allRefs.map((ref) => (
               <Chip
                 key={ref}
                 label={ref}
                 onClick={() => handleInsertRef(ref)}
-                sx={{ bgcolor: refColorMap[ref], color: '#23272f', fontWeight: 700, fontSize: 15, cursor: 'pointer', mb: 1 }}
+                sx={{
+                  bgcolor: refColorMap[ref],
+                  color: '#23272f',
+                  fontWeight: 700,
+                  fontSize: 15,
+                  cursor: 'pointer',
+                  mb: 1,
+                  maxWidth: {xs:160,sm:200},
+                  overflow: 'hidden',
+                  textOverflow: "",
+                  whiteSpace: 'nowrap',
+                  display: 'inline-flex',
+                  justifyContent: 'center',
+                  alignItems: 'center',
+                }}
+                title={ref}
               />
             ))}
           </Box>
