@@ -353,7 +353,7 @@ function Navbar() {
   if (location.pathname.startsWith('/ui/') || location.pathname === '/color-schemes') return null;
   return (
     <nav style={{ display: 'flex', gap: 16, marginBottom: 24 }}>
-      <Button variant="contained" color="primary" href="/" sx={{ textTransform: 'none' }}>Home</Button>
+      <Button variant="contained" color="primary" href="/promptor/" sx={{ textTransform: 'none' }}>Home</Button>
       {user && <button onClick={() => signOut(auth)}>Sign Out</button>}
     </nav>
   )
