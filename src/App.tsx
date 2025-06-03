@@ -351,11 +351,9 @@ function Navbar() {
   const location = useLocation();
   // Hide Navbar on UI page and color scheme editor page
   if (location.pathname.startsWith('/ui/') || location.pathname === '/color-schemes') return null;
-  // Use the correct base path for GitHub Pages
-  const basePath = '/promptor/';
   return (
     <nav style={{ display: 'flex', gap: 16, marginBottom: 24 }}>
-      <Button variant="contained" color="primary" href={basePath} sx={{ textTransform: 'none' }}>Home</Button>
+      <Button variant="contained" color="primary" href="/" sx={{ textTransform: 'none' }}>Home</Button>
       {user && <button onClick={() => signOut(auth)}>Sign Out</button>}
     </nav>
   )
@@ -365,15 +363,13 @@ function UIpageRouteWrapper() {
   const { uiName } = useParams<{ uiName: string }>()
   const navigate = useNavigate();
   if (!uiName) return <div>Missing UI name</div>
-  // Use the correct base path for GitHub Pages
-  const basePath = '/promptor/';
   return (
     <Box sx={{ position: 'relative', minHeight: '100vh' }}>
       <Button
         variant="contained"
         color="primary"
         sx={{ position: 'fixed', top: 24, right: 24, zIndex: 1300, textTransform: 'none' }}
-        onClick={() => navigate(basePath)}
+        onClick={() => navigate('/')}
       >
         Home
       </Button>
