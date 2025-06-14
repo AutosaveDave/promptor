@@ -1,16 +1,16 @@
 import { useEffect, useState } from 'react'
 import { Routes, Route, Navigate, useLocation, useParams, useNavigate } from 'react-router-dom'
-import { CssBaseline, Container, CircularProgress, Grid, Paper, Button, TextField, Typography, Box } from '@mui/material'
+import { CssBaseline, Container, CircularProgress, Grid, Paper, Button, TextField, Typography, Box, IconButton } from '@mui/material'
+import { Edit } from '@mui/icons-material';
 import { initializeApp } from 'firebase/app'
 import { getAuth, onAuthStateChanged, signInWithPopup, GoogleAuthProvider, signOut, signInWithEmailAndPassword } from 'firebase/auth'
 import { getFirestore, collection, getDocs, query, where } from 'firebase/firestore'
-// import type { UI } from './data/uiConfigTypes'
 import './App.css'
 import UIpage from './pages/UIpage'
 import ColorSchemeEditorPage from './pages/ColorSchemeEditorPage'
-import { getUINames } from './data/getUI'
+import UIEditorPage from './pages/UIEditorPage'
 
-// Firebase config (replace with your own config for production)
+// Remove getUINames import if present
 const firebaseConfig = {
   apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
   authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,
@@ -162,13 +162,72 @@ const uiButtonColors: string[] = [
 //   "#ffd166", "#0c637f", "#83d483", 
 //   "#073b4c", "#06d6a0", "#ef476f"
 
+
 function Home() {
-  const navigate = useNavigate()
-  const uiNames = getUINames();
-  const [user, setUser] = useState(auth.currentUser)
+  const navigate = useNavigate();
+  const [user, setUser] = useState(auth.currentUser);
+  const [uiList, setUiList] = useState<{ id: string; title: string }[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [isAdmin, setIsAdmin] = useState<boolean>(false);
+  const [checkingAdmin, setCheckingAdmin] = useState(true);
+
   useEffect(() => {
-    return onAuthStateChanged(auth, setUser)
-  }, [])
+    return onAuthStateChanged(auth, setUser);
+  }, []);
+
+  // Check admin status
+  useEffect(() => {
+    const checkAdmin = async () => {
+      setCheckingAdmin(true);
+      if (user && user.email) {
+        try {
+          const db = getFirestore(app, 'promptor-db');
+          const q = query(collection(db, 'users'), where('email', '==', user.email));
+          const snapshot = await getDocs(q);
+          if (!snapshot.empty) {
+            const docData = snapshot.docs[0].data();
+            setIsAdmin(!!docData.admin);
+          } else {
+            setIsAdmin(false);
+          }
+        } catch {
+          setIsAdmin(false);
+        }
+      } else {
+        setIsAdmin(false);
+      }
+      setCheckingAdmin(false);
+    };
+    checkAdmin();
+  }, [user]);
+
+  useEffect(() => {
+    const fetchUIs = async () => {
+      setLoading(true);
+      setError(null);
+      try {
+        const db = getFirestore(app, 'promptor-db');
+        const q = query(collection(db, 'UIs'));
+        const snapshot = await getDocs(q);
+        // Get up to 12 unique UI titles with their Firestore IDs
+        const list: { id: string; title: string }[] = [];
+        snapshot.forEach(doc => {
+          const data = doc.data();
+          if (typeof data.title === 'string' && data.title.trim() && !list.some(u => u.title === data.title.trim())) {
+            list.push({ id: doc.id, title: data.title.trim() });
+          }
+        });
+        setUiList(list.slice(0, 12));
+      } catch (err) {
+        setError('Failed to load UI list');
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchUIs();
+  }, []);
+
   return (
     <Box sx={{ position: 'relative', overflowY: 'auto' }}>
       {user && (
@@ -182,55 +241,106 @@ function Home() {
         </Button>
       )}
       <Typography variant="h4" sx={{ textAlign: 'center', mb: 4, color: "#ffffff" }}>Select a UI</Typography>
-      
-      {/* Color Scheme Editor Button */}
-      <Box sx={{ display: 'flex', justifyContent: 'center', mb: 4 }}>
-        <Button
-          variant="contained"
-          onClick={() => navigate('/color-schemes')}
-          sx={{
-            backgroundColor: '#9c27b0',
-            color: '#ffffff',
-            px: 4,
-            py: 1.5,
-            fontSize: 16,
-            textTransform: 'none',
-            '&:hover': {
-              backgroundColor: '#7b1fa2'
-            }
-          }}
-        >
-          🎨 Color Scheme Editor
-        </Button>
-      </Box>
-      
-      <Grid container spacing={4} justifyContent="center">
-        {uiNames.map((uiName, idx) => (
-          <Grid key={uiName} sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
+
+      {/* Color Scheme Editor & UI Editor Buttons (admin only) */}
+      <Box sx={{ display: 'flex', justifyContent: 'center', gap: 2, mb: 4 }}>
+        {isAdmin && !checkingAdmin && (
+          <>
             <Button
               variant="contained"
+              onClick={() => navigate('/color-schemes')}
               sx={{
-                width: 180,
-                height: 180,
-                fontSize: 24,
-                borderRadius: 4,
+                backgroundColor: '#9c27b0',
+                color: '#ffffff',
+                px: 4,
+                py: 1.5,
+                fontSize: 16,
                 textTransform: 'none',
-                backgroundColor: uiButtonColors[idx % uiButtonColors.length],
-                color: '#000000',
                 '&:hover': {
-                  backgroundColor: uiButtonColors[idx % uiButtonColors.length],
-                  opacity: 0.9,
+                  backgroundColor: '#7b1fa2'
                 }
               }}
-              onClick={() => navigate(`/ui/${uiName}`)}
             >
-              {uiName}
+              🎨 Color Scheme Editor
             </Button>
-          </Grid>
-        ))}
-      </Grid>
+            <Button
+              variant="contained"
+              onClick={() => navigate('/ui-editor')}
+              sx={{
+                backgroundColor: '#ffce54',
+                color: '#23272f',
+                px: 4,
+                py: 1.5,
+                fontSize: 16,
+                fontWeight: 600,
+                textTransform: 'none',
+                '&:hover': {
+                  backgroundColor: '#ffe6a7'
+                }
+              }}
+            >
+              🛠️ UI Editor
+            </Button>
+          </>
+        )}
+      </Box>
+
+      {loading ? (
+        <Box sx={{ textAlign: 'center', mt: 8 }}><CircularProgress /></Box>
+      ) : error ? (
+        <Typography color="error" sx={{ textAlign: 'center', mt: 4 }}>{error}</Typography>
+      ) : (
+        <Grid container spacing={4} justifyContent="center">
+          {uiList.map((ui, idx) => (
+            <Grid key={ui.id} sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', position: 'relative' }}>
+              <Box sx={{ position: 'relative', width: 180, height: 180 }}>
+                <Button
+                  variant="contained"
+                  sx={{
+                    width: 180,
+                    height: 180,
+                    fontSize: 24,
+                    borderRadius: 4,
+                    textTransform: 'none',
+                    backgroundColor: uiButtonColors[idx % uiButtonColors.length],
+                    color: '#000000',
+                    '&:hover': {
+                      backgroundColor: uiButtonColors[idx % uiButtonColors.length],
+                      opacity: 0.9,
+                    }
+                  }}
+                  onClick={() => navigate(`/ui/${ui.id}`)}
+                >
+                  {ui.title}
+                </Button>
+                {isAdmin && !checkingAdmin && (
+                  <IconButton
+                    aria-label="Edit UI"
+                    size="small"
+                    sx={{
+                      position: 'absolute',
+                      top: 8,
+                      right: 8,
+                      background: '#fff',
+                      color: '#23272f',
+                      zIndex: 2,
+                      '&:hover': { background: '#ffe6a7' },
+                    }}
+                    onClick={e => {
+                      e.stopPropagation();
+                      navigate(`/ui-editor/${ui.id}`);
+                    }}
+                  >
+                    <Edit fontSize="small" />
+                  </IconButton>
+                )}
+              </Box>
+            </Grid>
+          ))}
+        </Grid>
+      )}
     </Box>
-  )
+  );
 }
 
 function Navbar() {
@@ -243,7 +353,7 @@ function Navbar() {
   if (location.pathname.startsWith('/ui/') || location.pathname === '/color-schemes') return null;
   return (
     <nav style={{ display: 'flex', gap: 16, marginBottom: 24 }}>
-      <Button variant="contained" color="primary" href="/" sx={{ textTransform: 'none' }}>Home</Button>
+      <Button variant="contained" color="primary" href="/promptor/" sx={{ textTransform: 'none' }}>Home</Button>
       {user && <button onClick={() => signOut(auth)}>Sign Out</button>}
     </nav>
   )
@@ -268,6 +378,11 @@ function UIpageRouteWrapper() {
   )
 }
 
+function UIEditorRouteWrapper() {
+  const { uiId } = useParams();
+  return <UIEditorPage editingUIId={uiId || null} />;
+}
+
 function App() {
   const location = useLocation();
   const isLogin = location.pathname === '/login';
@@ -281,6 +396,8 @@ function App() {
         <Route path="/" element={<RequireAuth><Home /></RequireAuth>} />
         <Route path="/ui/:uiName" element={<RequireAuth><UIpageRouteWrapper /></RequireAuth>} />
         <Route path="/color-schemes" element={<RequireAuth><ColorSchemeEditorPage /></RequireAuth>} />
+        <Route path="/ui-editor" element={<RequireAuth><UIEditorPage /></RequireAuth>} />
+        <Route path="/ui-editor/:uiId" element={<RequireAuth><UIEditorRouteWrapper /></RequireAuth>} />
       </Routes>
     </>
   )
